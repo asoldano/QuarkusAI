@@ -12,7 +12,7 @@ public class ImageNetLabels {
     //FIXME
     private final static String jsonUrl =
                     "https://s3.amazonaws.com/deep-learning-models/image-models/imagenet_class_index.json";
-    private static ArrayList<String> predictionLabels = getLabels();
+    private static ArrayList<String> predictionLabels = null;
 
     @SuppressWarnings("unchecked")
 	public static ArrayList<String> getLabels() {
@@ -29,6 +29,16 @@ public class ImageNetLabels {
             }
         }
         return predictionLabels;
+    }
+
+    /*
+        Returns the description of the nth class in the 1000 classes of ImageNet
+     */
+    public static String getLabel(int n) {
+        if (predictionLabels == null) {
+            getLabels();
+        }
+        return predictionLabels.get(n);
     }
 
 }

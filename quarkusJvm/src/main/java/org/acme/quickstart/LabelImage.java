@@ -16,47 +16,27 @@ import com.google.common.io.ByteStreams;
 
 public final class LabelImage
 {
-   private static List<String> labels = loadLabels();
-   private static byte[] graphDef = loadBytes("graph.pb");
-
-   private static volatile Session s;
-
-   private static void initSession()
+   public static List<Probability> labelImage(byte[] bytes) throws Exception
    {
-      if (s == null)
-      {
-         synchronized (LabelImage.class)
-         {
-            if (s == null)
-            {
-               Graph graph = new Graph();
-               graph.importGraphDef(graphDef);
-               s = new Session(graph);
-            }
-         }
-      }
-   }
-
-   public static List<Probability> labelImage(String fileName, byte[] bytes) throws Exception
-   {
-      initSession();
-      float[] probabilities = null;
-      try (Tensor<String> input = Tensors.create(bytes); Tensor<Float> output = feedAndRun(s, input))
-      {
-         probabilities = extractProbabilities(output);
-         List<Probability> result = new ArrayList<>(labels.size());
-         for (int i = 0; i < labels.size(); i++) {
-            result.add(new Probability(labels.get(i), probabilities[i]));
-         }
-		 result.sort(new Comparator<Probability>() {
-			@Override
-			public int compare(Probability o1, Probability o2) {
-				return Float.compare(o2.getPercentage(), o1.getPercentage());
+		try (Graph graph = new Graph(); Session s = new Session(graph)) {
+			graph.importGraphDef(loadBytes("graph.pb"));
+			try (Tensor<String> input = Tensors.create(bytes); Tensor<Float> output = feedAndRun(s, input)) {
+				float[] probabilities = extractProbabilities(output);
+				List<String> labels = loadLabels();
+				List<Probability> result = new ArrayList<>(labels.size());
+				for (int i = 0; i < labels.size(); i++) {
+					result.add(new Probability(labels.get(i), probabilities[i]));
+				}
+				result.sort(new Comparator<Probability>() {
+					@Override
+					public int compare(Probability o1, Probability o2) {
+						return Float.compare(o2.getPercentage(), o1.getPercentage());
+					}
+				});
+				return result;
 			}
-		 });
-         return result;
-      }
-   }
+		}
+	   }
 
    private static Tensor<Float> feedAndRun(Session session, Tensor<String> input)
    {

@@ -11,7 +11,8 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <deeplearning4j.version>1.0.0-beta5</deeplearning4j.version>
+    <deeplearning4j.version>0.9.1</deeplearning4j.version>
+<!--     <deeplearning4j.version>1.0.0-beta5</deeplearning4j.version> -->
     <openblas.version>0.3.6-1.5.1</openblas.version> <!-- This needs to be what the deeplearning4j (nd4j) version above expects -->
     <mkl.version>2019.4-1.5.1</mkl.version> <!-- This needs to be what the deeplearning4j (nd4j) version above expects -->
     <mkl-dnn.version>0.20-1.5.1</mkl-dnn.version> <!-- This needs to be what the deeplearning4j (nd4j) version above expects -->
@@ -58,14 +59,14 @@
       <groupId>org.nd4j</groupId>
       <artifactId>nd4j-native-platform</artifactId>
       <version>${deeplearning4j.version}</version>
-      <exclusions>
+<!--       <exclusions>
         <exclusion>
           <groupId>*</groupId>
           <artifactId>*</artifactId>
         </exclusion>
-      </exclusions>
+      </exclusions> -->
     </dependency>
-    <!-- nd4j transitive dependencies overrides for getting rid of android/ios/windows native libraries -->
+    <!-- nd4j transitive dependencies overrides for getting rid of android/ios/windows native libraries
     <dependency>
       <groupId>org.bytedeco</groupId>
       <artifactId>openblas-platform</artifactId>
@@ -148,7 +149,7 @@
       <artifactId>nd4j-native</artifactId>
       <classifier>linux-x86_64</classifier>
       <version>${deeplearning4j.version}</version>
-    </dependency>
+    </dependency> -->
     <!-- end of nd4j transitive dependencies override -->
     
     <dependency>
@@ -157,10 +158,16 @@
       <version>${deeplearning4j.version}</version>
     </dependency>
     <dependency>
+    <groupId>org.bytedeco.javacpp-presets</groupId>
+    <artifactId>opencv</artifactId>
+    <classifier>linux-x86_64</classifier>
+    <version>3.2.0-1.3</version>
+  </dependency>
+    <dependency>
       <groupId>org.datavec</groupId>
       <artifactId>datavec-data-image</artifactId>
       <version>${deeplearning4j.version}</version>
-      <exclusions>
+<!--       <exclusions>
         <exclusion>
           <groupId>org.bytedeco</groupId>
           <artifactId>opencv-platform</artifactId>
@@ -173,9 +180,9 @@
           <groupId>org.bytedeco</groupId>
           <artifactId>hdf5-platform</artifactId>
         </exclusion>
-      </exclusions>
+      </exclusions> -->
     </dependency>
-    <!-- datavec-data-image dependencies overrides for getting rid of android/ios/windows native libraries -->
+    <!-- datavec-data-image dependencies overrides for getting rid of android/ios/windows native libraries
     <dependency>
       <groupId>org.bytedeco</groupId>
       <artifactId>opencv-platform</artifactId>
@@ -226,7 +233,7 @@
       <artifactId>hdf5</artifactId>
       <classifier>linux-x86_64</classifier>
       <version>${hdf5.version}</version>
-    </dependency>
+    </dependency> -->
     <!-- end of datavec-data-image overrides -->
   </dependencies>
   <build>

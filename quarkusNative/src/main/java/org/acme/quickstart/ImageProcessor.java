@@ -20,7 +20,7 @@ public final class ImageProcessor
    static {
 	   try {
 	   @SuppressWarnings("rawtypes")
-	   ZooModel zooModel = VGG16.builder().build();
+	   ZooModel zooModel = new VGG16();
 	   vgg16 = (ComputationGraph)zooModel.initPretrained(PretrainedType.IMAGENET);
 	   } catch (Exception e) {
 		   throw new RuntimeException(e);

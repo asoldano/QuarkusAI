@@ -37,7 +37,7 @@ public final class LabelImage
       }
    }
 
-   public static List<Probability> labelImage(String fileName, byte[] bytes) throws Exception
+   public static List<Probability> labelImage(byte[] bytes) throws Exception
    {
       initSession();
       float[] probabilities = null;

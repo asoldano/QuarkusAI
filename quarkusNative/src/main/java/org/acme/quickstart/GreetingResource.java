@@ -11,7 +11,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.MultivaluedMap;
 
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
@@ -26,26 +25,11 @@ public class GreetingResource {
     public ImageProcessingResult loadImage(@HeaderParam("Content-Length") String contentLength, @PathParam("results") int results, MultipartFormDataInput input) throws Exception {
         long before = System.currentTimeMillis();
         InputPart inputPart = input.getFormDataMap().get("file").iterator().next();
-        String fileName = parseFileName(inputPart.getHeaders());
         byte[] bytes = streamToByte(inputPart.getBody(InputStream.class, null), Integer.parseInt(contentLength));
-        List<Probability> probs = LabelImage.labelImage(fileName, bytes).subList(0, results);
+        List<Probability> probs = LabelImage.labelImage(bytes).subList(0, results);
         return new ImageProcessingResult((System.currentTimeMillis() - before), probs);
     }
 
-    // Parse Content-Disposition header to get the original file name
-    private static String parseFileName(MultivaluedMap<String, String> headers) {
-        String[] contentDispositionHeader = headers.getFirst("Content-Disposition").split(";");
-        for (String name : contentDispositionHeader) {
-            if ((name.trim().startsWith("filename"))) {
-                String[] tmp = name.split("=");
-                String fileName = tmp[1].trim().replaceAll("\"", "");
-                return fileName;
-            }
-        }
-        return "randomName";
-    }
-
-    
     private static final int MAX_BUFFER_SIZE = Integer.MAX_VALUE - 8;
     private static final int BUFFER_SIZE = 8192;
     private static byte[] streamToByte(InputStream source, int contentLength) throws IOException {

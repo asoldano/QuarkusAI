@@ -1,5 +1,6 @@
 package org.acme.quickstart;
 
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.BufferedReader;
@@ -69,6 +70,12 @@ public final class LabelImage
       
       
       BufferedImage img = ImageIO.read(is);
+      if (img.getHeight() != 128 || img.getWidth() != 128) {
+          Image si = img.getScaledInstance(128, 128, Image.SCALE_DEFAULT);
+          BufferedImage buffered = new BufferedImage(128, 128, img.getType());
+          buffered.getGraphics().drawImage(si, 0, 0 , null);
+          img = buffered;
+       }
 //      //if (img.getType() != BufferedImage.TYPE_3BYTE_BGR) {
 //         BufferedImage newImage = new BufferedImage(
 //                 128, 128, BufferedImage.TYPE_3BYTE_BGR);
@@ -88,7 +95,6 @@ public final class LabelImage
       
       float[] fdata = new float[data.length];
       for (int i = 0; i < data.length; i++) {
-//          fdata[i] = (data[i] & 0xFF) / 0.0900000035763f;
           fdata[i] = ((data[i] & 0xFF) - 127.5f) / 127.5f;
       }
       for (int i = 0; i < 3; i++) {

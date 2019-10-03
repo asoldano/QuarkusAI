@@ -51,6 +51,11 @@
       <artifactId>tensorflow</artifactId>
       <version>1.13.1</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-imaging</artifactId>
+      <version>1.0-alpha1</version>
+    </dependency>
     <!-- For ByteStreams.toByteArray: https://google.github.io/guava/releases/23.0/api/docs/com/google/common/io/ByteStreams.html -->
     <dependency>
       <groupId>com.google.guava</groupId>

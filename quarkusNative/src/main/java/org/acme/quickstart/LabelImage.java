@@ -1,7 +1,9 @@
 package org.acme.quickstart;
 
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,8 +14,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import javax.imageio.ImageIO;
-
+import org.apache.commons.imaging.ImageReadException;
+import org.apache.commons.imaging.Imaging;
 import org.tensorflow.Graph;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
@@ -76,52 +78,32 @@ public final class LabelImage
       reloaded = true;
    }
 
-   private static Tensor<Float> makeImageTensor(InputStream is) throws IOException {
+   private static Tensor<Float> makeImageTensor(InputStream is) throws IOException, ImageReadException {
       long millis = System.currentTimeMillis();
       
-      
-      BufferedImage img = ImageIO.read(is);
-//      //if (img.getType() != BufferedImage.TYPE_3BYTE_BGR) {
-//         BufferedImage newImage = new BufferedImage(
-//                 128, 128, BufferedImage.TYPE_3BYTE_BGR);
-//         Graphics2D g = newImage.createGraphics();
-//         g.drawImage(img, 0, 0, 128, 128, null);
-//         g.dispose();
-//         img = newImage;
-//      //}
+      BufferedImage img = Imaging.getBufferedImage(is);
+      if (img.getHeight() != 128 || img.getWidth() != 128) {
+         Image si = img.getScaledInstance(128, 128, Image.SCALE_DEFAULT);
+         BufferedImage buffered = new BufferedImage(128, 128, img.getType());
+         buffered.getGraphics().drawImage(si, 0, 0 , null);
+         img = buffered;
+      }
 
-      byte[] data = ((DataBufferByte) img.getData().getDataBuffer()).getData();
-      // ImageIO.read seems to produce BGR-encoded images, but the model expects RGB.
-      data = bgr2rgb(data);
+      int[] data = ((DataBufferInt) img.getData().getDataBuffer()).getData();
       final long BATCH_SIZE = 1;
       final long CHANNELS = 3;
       long[] shape = new long[] {BATCH_SIZE, 128, 128, CHANNELS};
-      System.out.println(System.currentTimeMillis() - millis);
-      
-      float[] fdata = new float[data.length];
+
+      float[] fdata = new float[data.length*3];
       for (int i = 0; i < data.length; i++) {
-//          fdata[i] = (data[i] & 0xFF) / 0.0900000035763f;
-          fdata[i] = ((data[i] & 0xFF) - 127.5f) / 127.5f;
+          fdata[3*i + 2] = (((data[i]      ) & 0xFF) - 127.5f) / 127.5f;
+          fdata[3*i + 1] = (((data[i] >>  8) & 0xFF) - 127.5f) / 127.5f;
+          fdata[3*i    ] = (((data[i] >> 16) & 0xFF) - 127.5f) / 127.5f;
       }
-      for (int i = 0; i < 3; i++) {
-          System.out.print(" " + fdata[i]);
-      }
-      System.out.println();
-      for (int i = data.length - 3; i < data.length; i++) {
-          System.out.print(" " + fdata[i]);
-      }
-      System.out.println();
+      System.out.println("Read & resize time: " + (System.currentTimeMillis() - millis));
       return Tensor.create(shape, FloatBuffer.wrap(fdata));
    }
 
-   private static byte[] bgr2rgb(byte[] data) {
-      for (int i = 0; i < data.length; i += 3) {
-         byte tmp = data[i];
-         data[i] = data[i + 2];
-         data[i + 2] = tmp;
-      }
-      return data;
-   }
    private static Tensor<Float> feedAndRun(Session session, Tensor<Float> input)
    {
       return session.runner().feed("input", input).fetch("MobilenetV1/Predictions/Reshape_1").run().get(0)
@@ -134,22 +116,6 @@ public final class LabelImage
       output.copyTo(probabilities);
       return probabilities;
    }
-
-//   private static byte[] warmUpAndDumpGraphDef()
-//   {
-//      Graph graph = new Graph();
-//      graph.importGraphDef(loadBytes("graph.pb"));
-//      try (Session ss = new Session(graph);
-//            Tensor<String> input = Tensors.create(loadBytes("bg.png"));
-//            Tensor<Float> output = feedAndRun(ss, input))
-//      {
-//         float[] probabilities = extractProbabilities(output);
-//         int label = argmax(probabilities);
-//         System.out.println(
-//               String.format("Warm-up: %-15s (%.2f%% likely)", labels.get(label), probabilities[label] * 100.0));
-//         return graph.toGraphDef();
-//      }
-//   }
 
    private static byte[] loadBytes(String resource)
    {
@@ -186,18 +152,4 @@ public final class LabelImage
          throw new RuntimeException(e);
       }
    }
-
-   private static int argmax(float[] probabilities)
-   {
-      int best = 0;
-      for (int i = 1; i < probabilities.length; ++i)
-      {
-         if (probabilities[i] > probabilities[best])
-         {
-            best = i;
-         }
-      }
-      return best;
-   }
-
 }

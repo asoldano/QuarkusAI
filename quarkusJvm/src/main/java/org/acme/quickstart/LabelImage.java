@@ -109,14 +109,6 @@ public final class LabelImage
          data[i + 2] = tmp;
       }
       return data;
-//      byte[] r = new byte[data.length];
-//      for (int j = 0; j < 3; j++) {
-//    	  int k = j*data.length/3;
-//      for (int i = 0; i < data.length; i += 3) {
-//    	  r[k+i/3] = data[i];
-//       }
-//      }
-//      return r;
    }
    private static Tensor<Float> feedAndRun(Session session, Tensor<Float> input)
    {

@@ -67,8 +67,6 @@ public final class LabelImage
 
    private static Tensor<Float> makeImageTensor(InputStream is) throws IOException {
       long millis = System.currentTimeMillis();
-      
-      
       BufferedImage img = ImageIO.read(is);
       if (img.getHeight() != 128 || img.getWidth() != 128) {
           Image si = img.getScaledInstance(128, 128, Image.SCALE_DEFAULT);
@@ -76,14 +74,6 @@ public final class LabelImage
           buffered.getGraphics().drawImage(si, 0, 0 , null);
           img = buffered;
        }
-//      //if (img.getType() != BufferedImage.TYPE_3BYTE_BGR) {
-//         BufferedImage newImage = new BufferedImage(
-//                 128, 128, BufferedImage.TYPE_3BYTE_BGR);
-//         Graphics2D g = newImage.createGraphics();
-//         g.drawImage(img, 0, 0, 128, 128, null);
-//         g.dispose();
-//         img = newImage;
-//      //}
 
       byte[] data = ((DataBufferByte) img.getData().getDataBuffer()).getData();
       // ImageIO.read seems to produce BGR-encoded images, but the model expects RGB.
@@ -91,20 +81,11 @@ public final class LabelImage
       final long BATCH_SIZE = 1;
       final long CHANNELS = 3;
       long[] shape = new long[] {BATCH_SIZE, 128, 128, CHANNELS};
-      System.out.println(System.currentTimeMillis() - millis);
-      
       float[] fdata = new float[data.length];
       for (int i = 0; i < data.length; i++) {
           fdata[i] = ((data[i] & 0xFF) - 127.5f) / 127.5f;
       }
-      for (int i = 0; i < 3; i++) {
-    	  System.out.print(" " + fdata[i]);
-      }
-      System.out.println();
-      for (int i = data.length - 3; i < data.length; i++) {
-    	  System.out.print(" " + fdata[i]);
-      }
-      System.out.println();
+      System.out.println("Read & resize time: " + (System.currentTimeMillis() - millis));
       return Tensor.create(shape, FloatBuffer.wrap(fdata));
    }
 

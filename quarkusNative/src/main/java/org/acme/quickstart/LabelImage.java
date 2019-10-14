@@ -1,17 +1,23 @@
 package org.acme.quickstart;
 
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.commons.imaging.ImageReadException;
+import org.apache.commons.imaging.Imaging;
 import org.tensorflow.Graph;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
-import org.tensorflow.Tensors;
 
 import com.google.common.io.ByteStreams;
 
@@ -19,7 +25,7 @@ public final class LabelImage
 {
    private static List<String> labels = loadLabels();
    private static volatile boolean reloaded = false;
-   private static byte[] graphDef = warmUpAndDumpGraphDef();
+   private static byte[] graphDef = loadBytes("mobilenet_frozen.pb");
 
    private static volatile Session s;
 
@@ -39,17 +45,17 @@ public final class LabelImage
       }
    }
 
-   public static List<Probability> labelImage(String fileName, byte[] bytes) throws Exception
+   public static List<Probability> labelImage(String fileName, InputStream is) throws Exception
    {
       graalVmHack();
       initSession();
-      float[] probabilities = null;
-      try (Tensor<String> input = Tensors.create(bytes); Tensor<Float> output = feedAndRun(s, input))
+      float[][] probabilities = null;
+      try (Tensor<Float> input = makeImageTensor(is);Tensor<Float> output = feedAndRun(s, input))
       {
          probabilities = extractProbabilities(output);
          List<Probability> result = new ArrayList<>(labels.size());
          for (int i = 0; i < labels.size(); i++) {
-            result.add(new Probability(labels.get(i), probabilities[i]));
+            result.add(new Probability(labels.get(i), probabilities[0][i]));
          }
          result.sort(new Comparator<Probability>() {
             @Override
@@ -71,33 +77,43 @@ public final class LabelImage
       reloaded = true;
    }
 
-   private static Tensor<Float> feedAndRun(Session session, Tensor<String> input)
+   private static Tensor<Float> makeImageTensor(InputStream is) throws IOException, ImageReadException {
+      long millis = System.currentTimeMillis();
+      
+      BufferedImage img = Imaging.getBufferedImage(is);
+      if (img.getHeight() != 128 || img.getWidth() != 128) {
+         Image si = img.getScaledInstance(128, 128, Image.SCALE_DEFAULT);
+         BufferedImage buffered = new BufferedImage(128, 128, img.getType());
+         buffered.getGraphics().drawImage(si, 0, 0 , null);
+         img = buffered;
+      }
+
+      int[] data = ((DataBufferInt) img.getData().getDataBuffer()).getData();
+      final long BATCH_SIZE = 1;
+      final long CHANNELS = 3;
+      long[] shape = new long[] {BATCH_SIZE, 128, 128, CHANNELS};
+
+      float[] fdata = new float[data.length*3];
+      for (int i = 0; i < data.length; i++) {
+          fdata[3*i + 2] = (((data[i]      ) & 0xFF) - 127.5f) / 127.5f;
+          fdata[3*i + 1] = (((data[i] >>  8) & 0xFF) - 127.5f) / 127.5f;
+          fdata[3*i    ] = (((data[i] >> 16) & 0xFF) - 127.5f) / 127.5f;
+      }
+      System.out.println("Read & resize time: " + (System.currentTimeMillis() - millis));
+      return Tensor.create(shape, FloatBuffer.wrap(fdata));
+   }
+
+   private static Tensor<Float> feedAndRun(Session session, Tensor<Float> input)
    {
-      return session.runner().feed("encoded_image_bytes", input).fetch("probabilities").run().get(0)
+      return session.runner().feed("input", input).fetch("MobilenetV1/Predictions/Reshape_1").run().get(0)
             .expect(Float.class);
    }
 
-   private static float[] extractProbabilities(Tensor<Float> output)
+   private static float[][] extractProbabilities(Tensor<Float> output)
    {
-      float[] probabilities = new float[(int) output.shape()[0]];
+      float[][] probabilities = new float[(int) output.shape()[0]][(int) output.shape()[1]];
       output.copyTo(probabilities);
       return probabilities;
-   }
-
-   private static byte[] warmUpAndDumpGraphDef()
-   {
-      Graph graph = new Graph();
-      graph.importGraphDef(loadBytes("graph.pb"));
-      try (Session ss = new Session(graph);
-            Tensor<String> input = Tensors.create(loadBytes("bg.png"));
-            Tensor<Float> output = feedAndRun(ss, input))
-      {
-         float[] probabilities = extractProbabilities(output);
-         int label = argmax(probabilities);
-         System.out.println(
-               String.format("Warm-up: %-15s (%.2f%% likely)", labels.get(label), probabilities[label] * 100.0));
-         return graph.toGraphDef();
-      }
    }
 
    private static byte[] loadBytes(String resource)
@@ -135,18 +151,4 @@ public final class LabelImage
          throw new RuntimeException(e);
       }
    }
-
-   private static int argmax(float[] probabilities)
-   {
-      int best = 0;
-      for (int i = 1; i < probabilities.length; ++i)
-      {
-         if (probabilities[i] > probabilities[best])
-         {
-            best = i;
-         }
-      }
-      return best;
-   }
-
 }
